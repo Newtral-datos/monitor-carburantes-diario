@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.DS_Store
+
+# Archivos generados (se regeneran en cada ejecución)
+data/estaciones.geojson
+data/estaciones.pmtiles
+data/estaciones.mbtiles
+data/stats.json
+viz/estaciones.pmtiles
+viz/stats.json
+viz/historico/

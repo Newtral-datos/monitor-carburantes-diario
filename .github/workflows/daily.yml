@@ -1,0 +1,61 @@
+name: Monitor Carburantes
+
+on:
+  schedule:
+    - cron: "0 5 * * *"     # 07:00 Madrid (UTC+2 verano / UTC+1 invierno)
+  workflow_dispatch: {}      # permite lanzarlo manualmente desde GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0      # necesario para que git pull traiga todo el histórico
+
+      - name: Configurar git y sincronizar histórico
+        run: |
+          git config user.name  "github-actions"
+          git config user.email "github-actions@github.com"
+          git pull origin main --rebase
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalar tippecanoe
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y tippecanoe
+
+      - name: Instalar dependencias Python
+        run: pip install -r requirements.txt
+
+      - name: Descargar datos y generar PMTiles + históricos
+        run: python run.py
+
+      - name: Calcular variación por estación
+        run: python variacion.py
+
+      - name: Guardar datos en main
+        run: |
+          git add data/estaciones_carburantes_*.xlsx \
+                  data/historico_completo.xlsx \
+                  data/variacion_estaciones.xlsx
+          git diff --staged --quiet || git commit -m "datos: $(date +%Y-%m-%d)"
+          git push origin main
+
+      - name: Publicar viz/ en GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: viz
+          force_orphan: true
